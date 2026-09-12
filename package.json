@@ -1,0 +1,16 @@
+{
+    "name": "worklabs",
+    "version": "0.1.0",
+    "private": true,
+    "description": "Single place for jobs listing and finding jobs",
+    "workspaces": [
+        "apps/*","packages/*"
+    ],
+    "scripts": {
+        "dev": "echo 'No woorkspaces yet. Coming soon'"
+    },
+    "engines":{
+        "node": "24.18.0"
+    },
+    "packageManager": "npm@11.16.0"
+}
