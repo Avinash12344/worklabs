@@ -4,6 +4,7 @@ import cors from 'cors';
 import { HttpError } from './lib/http-error.js';
 import jobsRouter from './routes/jobs.js';
 import authRouter from "./routes/auth.js";
+import proposalsRouter from './routes/proposals.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -39,6 +40,7 @@ app.get('/api/version', (req: Request, res: Response) => {
 
 app.use('/api/auth', authRouter);
 app.use('/api/jobs', jobsRouter);
+app.use('/api/proposals', proposalsRouter);
 
 // ============================================================
 // Error handler (must be last)

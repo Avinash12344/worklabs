@@ -11,6 +11,38 @@ declare global {
   }
 }
 
+export function requireRole(...allowedRoles: string[]) {
+  return (req: Request, res: Response, next: NextFunction) => {
+    if (!req.user) {
+      return next(new HttpError(401, 'Not authenticated'));
+    }
+
+    // Fetch full user from DB to check role
+    supabase
+      .from('users')
+      .select('role')
+      .eq('id', req.user.id)
+      .is('deleted_at', null)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) return next(new Error(`Supabase: ${error.message}`));
+        if (!data) return next(new HttpError(404, 'User not found'));
+
+        if (!allowedRoles.includes(data.role)) {
+          return next(
+            new HttpError(
+              403,
+              `This action requires one of: ${allowedRoles.join(', ')}`
+            )
+          );
+        }
+
+        next();
+      })
+      .catch(next);
+  };
+}
+
 export async function requireAuth(
   req: Request,
   res: Response,

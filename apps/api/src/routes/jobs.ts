@@ -4,7 +4,7 @@ import { HttpError } from '../lib/http-error.js';
 import {
   createJobSchema,
   updateJobSchema,
-} from '../schemas/job.js';
+} from "@worklabs/shared";
 import {requireAuth} from "../middleware/auth.js"
 
 const router = Router();
@@ -170,5 +170,52 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
     next(err);
   }
 });
+
+// ============================================================
+// GET /api/jobs/:id/proposals — client views proposals on their job
+// ============================================================
+router.get(
+  '/:id/proposals',
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) throw new HttpError(401, 'Not authenticated');
+      const { id } = req.params;
+
+      // Verify ownership
+      const { data: job, error: jobError } = await supabase
+        .from('jobs')
+        .select('client_id')
+        .eq('id', id)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (jobError) throw new Error(`Supabase: ${jobError.message}`);
+      if (!job) throw new HttpError(404, 'Job not found');
+      if (job.client_id !== req.user.id) {
+        throw new HttpError(403, 'You can only view proposals on your own jobs');
+      }
+
+      const { data, error } = await supabase
+        .from('proposals')
+        .select(
+          `
+          id, cover_letter, bid_amount, status, created_at,
+          freelancer:users!proposals_freelancer_id_fkey (
+            id, full_name, avatar_url
+          )
+        `
+        )
+        .eq('job_id', id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw new Error(`Supabase: ${error.message}`);
+
+      res.json({ proposals: data, count: data?.length ?? 0 });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
 
 export default router;

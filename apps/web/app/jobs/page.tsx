@@ -1,3 +1,4 @@
+import Link from "next/link";
 type Job = {
   id: string;
   title: string;
@@ -32,6 +33,16 @@ export default async function JobsPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-8">
+      // at the top of the returned JSX:
+<div className="flex items-center justify-between mb-6">
+  <h1 className="text-3xl font-bold text-slate-900">Open Jobs</h1>
+  <Link
+    href="/jobs/new"
+    className="px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-700"
+  >
+    Post a Job
+  </Link>
+</div>
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-slate-900 mb-6">Open Jobs</h1>
 
@@ -44,6 +55,9 @@ export default async function JobsPage() {
                 key={job.id}
                 className="bg-white rounded-lg shadow-sm p-6 border border-slate-200"
               >
+               <Link
+                href={`/jobs/${job.id}`}
+    className="block bg-white rounded-lg shadow-sm p-6 border border-slate-200 hover:shadow-md transition">
                 <h2 className="text-xl font-semibold text-slate-900">
                   {job.title}
                 </h2>
@@ -57,7 +71,7 @@ export default async function JobsPage() {
                   </span>
                   <span>•</span>
                   <span>by {job.client.full_name}</span>
-                </div>
+                </div></Link>
               </li>
             ))}
           </ul>
