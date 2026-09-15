@@ -17,6 +17,11 @@ export default function HomePage() {
             <Link href="/jobs" className="text-slate-700 hover:text-slate-900">
               Jobs
             </Link>
+            {user && (
+  <Link href="/contracts" className="text-slate-700 hover:text-slate-900">
+    Contracts
+  </Link>
+)}
             {loading ? null : user ? (
               <>
                 <Link

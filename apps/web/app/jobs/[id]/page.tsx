@@ -54,6 +54,32 @@ export default function JobDetailPage() {
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  const [accepting, setAccepting] = useState<string | null>(null);
+
+async function handleAccept(proposalId: string) {
+  if (!confirm('Accept this proposal? Other proposals will be rejected.')) return;
+
+  setAccepting(proposalId);
+  try {
+    const res = await fetch(`${API_URL}/api/proposals/${proposalId}/accept`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to accept');
+    }
+
+    const data = await res.json();
+    router.push(`/contracts/${data.contract_id}`);
+  } catch (err) {
+    alert(err instanceof Error ? err.message : 'Something went wrong');
+  } finally {
+    setAccepting(null);
+  }
+}
+
   // Fetch job
   useEffect(() => {
     async function fetchJob() {
@@ -269,6 +295,7 @@ export default function JobDetailPage() {
 
         {/* Client: proposals list */}
         {isOwner && (
+            
           <div className="mt-6 bg-white rounded-lg shadow-sm p-6 border border-slate-200">
             <h2 className="text-xl font-semibold text-slate-900">
               Proposals ({proposals.length})
@@ -279,26 +306,41 @@ export default function JobDetailPage() {
             ) : (
               <ul className="mt-4 space-y-4">
                 {proposals.map((p) => (
-                  <li
-                    key={p.id}
-                    className="border border-slate-200 rounded-md p-4"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium text-slate-900">
-                        {p.freelancer.full_name}
-                      </div>
-                      <div className="text-slate-900 font-semibold">
-                        ₹{(p.bid_amount / 100).toLocaleString()}
-                      </div>
-                    </div>
-                    <p className="mt-2 text-slate-700 whitespace-pre-wrap text-sm">
-                      {p.cover_letter}
-                    </p>
-                    <div className="mt-3 text-xs text-slate-500">
-                      {new Date(p.created_at).toLocaleString()}
-                    </div>
-                  </li>
-                ))}
+  <li key={p.id} className="border border-slate-200 rounded-md p-4">
+    <div className="flex items-center justify-between">
+      <div className="font-medium text-slate-900">
+        {p.freelancer.full_name}
+      </div>
+      <div className="text-slate-900 font-semibold">
+        ₹{(p.bid_amount / 100).toLocaleString()}
+      </div>
+    </div>
+    <p className="mt-2 text-slate-700 whitespace-pre-wrap text-sm">
+      {p.cover_letter}
+    </p>
+
+    <div className="mt-3 flex items-center justify-between">
+      <span
+        className={`text-xs uppercase tracking-wide ${
+          p.status === 'pending' ? 'text-amber-600' :
+          p.status === 'accepted' ? 'text-green-600' : 'text-slate-500'
+        }`}
+      >
+        {p.status}
+      </span>
+
+      {p.status === 'pending' && job.status === 'open' && (
+        <button
+          onClick={() => handleAccept(p.id)}
+          disabled={accepting === p.id}
+          className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+        >
+          {accepting === p.id ? 'Accepting...' : 'Accept'}
+        </button>
+      )}
+    </div>
+  </li>
+))}
               </ul>
             )}
           </div>

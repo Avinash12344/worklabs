@@ -147,4 +147,36 @@ router.get(
   }
 );
 
+// ============================================================
+// POST /api/proposals/:id/accept — client accepts a proposal
+// ============================================================
+router.post(
+  '/:id/accept',
+  requireAuth,
+  requireRole('client'),
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!req.user) throw new HttpError(401, 'Not authenticated');
+      const { id } = req.params;
+
+      const { data: contractId, error } = await supabase.rpc('accept_proposal', {
+        p_proposal_id: id,
+        p_user_id: req.user.id,
+      });
+
+      if (error) {
+        // Postgres RAISE EXCEPTION messages come through here
+        throw new HttpError(400, error.message);
+      }
+
+      res.json({
+        success: true,
+        contract_id: contractId,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 export default router;
