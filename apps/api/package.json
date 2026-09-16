@@ -9,11 +9,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
     "@supabase/supabase-js": "^2.116.0",
     "@worklabs/shared": "*",
+    "bullmq": "^6.3.6",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.0.0",
+    "ioredis": "^6.0.0",
+    "react": "^19.2.8",
+    "resend": "^6.28.1",
     "stripe": "^22.6.2",
     "zod": "^4.6.5"
   },

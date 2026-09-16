@@ -4,6 +4,7 @@ import { supabaseAuth } from '../lib/supabase-auth.js';
 import { supabase } from '../lib/supabase.js';
 import { HttpError } from '../lib/http-error.js';
 import { requireAuth } from '../middleware/auth.js';
+import { emailQueue } from '../lib/queues.js';
 
 const router = Router();
 
@@ -50,6 +51,7 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
       full_name,
     });
 
+
     if (profileError) {
       // Rollback: delete the auth user so we don't have orphans
       // (Supabase admin API needed — we'll improve this later)
@@ -68,6 +70,15 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
   } catch (err) {
     next(err);
   }
+
+  
+    // Queue welcome email (fire-and-forget)
+await emailQueue.add('welcome', {
+  to: email,
+  subject: 'Welcome to WorkLabs',
+  template: 'welcome',
+  data: { fullName: full_name, role },
+});
 });
 
 // ============================================================

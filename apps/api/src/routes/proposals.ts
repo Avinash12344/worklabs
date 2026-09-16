@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js';
 import { HttpError } from '../lib/http-error.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { createProposalSchema } from '@worklabs/shared';
+import { emailQueue } from '../lib/queues.js';
 
 const router = Router();
 
@@ -53,6 +54,7 @@ router.post(
         .select()
         .single();
 
+
       if (error) {
         // Unique constraint: freelancer already applied
         if (error.code === '23505') {
@@ -65,6 +67,38 @@ router.post(
     } catch (err) {
       next(err);
     }
+
+    / After res.status(201).json({ proposal: data }), or before:
+// Fetch client info
+const { data: job } = await supabase
+  .from('jobs')
+  .select('title, client:users!jobs_client_id_fkey ( email, full_name )')
+  .eq('id', job_id)
+  .single();
+
+const { data: freelancer } = await supabase
+  .from('users')
+  .select('full_name')
+  .eq('id', req.user.id)
+  .single();
+
+if (job && freelancer) {
+  const client = job.client as { email: string; full_name: string } | null;
+  if (client) {
+    await emailQueue.add('proposal_received', {
+      to: client.email,
+      subject: `New proposal on "${job.title}"`,
+      template: 'proposal_received',
+      data: {
+        clientName: client.full_name,
+        jobTitle: job.title,
+        freelancerName: freelancer.full_name,
+        bidAmount: bid_amount,
+        jobId: job_id,
+      },
+    });
+  }
+}
   }
 );
 

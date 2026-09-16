@@ -6,6 +6,7 @@ import {
   createMilestoneSchema,
   updateMilestoneSchema,
 } from '@worklabs/shared';
+import { emailQueue } from '../lib/queues.js';
 
 const router = Router();
 
@@ -257,6 +258,39 @@ router.post(
     } catch (err) {
       next(err);
     }
+
+   
+
+// After approve_milestone rpc:
+const { data: ms } = await supabase
+  .from('milestones')
+  .select(`
+    title, amount,
+    contract:contracts!milestones_contract_id_fkey (
+      id,
+      freelancer:users!contracts_freelancer_id_fkey ( email, full_name )
+    )
+  `)
+  .eq('id', id)
+  .single();
+
+if (ms) {
+  const contract = ms.contract as any;
+  const freelancer = contract?.freelancer;
+  if (freelancer) {
+    await emailQueue.add('milestone_approved', {
+      to: freelancer.email,
+      subject: `Milestone approved: ${ms.title}`,
+      template: 'milestone_approved',
+      data: {
+        freelancerName: freelancer.full_name,
+        milestoneTitle: ms.title,
+        amount: ms.amount,
+        contractId: contract.id,
+      },
+    });
+  }
+}
   }
 );
 

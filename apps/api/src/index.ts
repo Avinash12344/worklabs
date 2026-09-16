@@ -9,6 +9,7 @@ import contractsRouter from "./routes/contracts.js";
 import milestonesRouter from './routes/milestones.js';
 import webhooksRouter from './routes/webhooks.js';
 import connectRouter from './routes/connect.js';
+import { startEmailWorker } from './workers/email-worker.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -73,3 +74,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
 app.listen(PORT, () => {
   console.log(`[api] running at http://localhost:${PORT}`);
 });
+
+// Start background workers (in production, this would be a separate process)
+startEmailWorker();
