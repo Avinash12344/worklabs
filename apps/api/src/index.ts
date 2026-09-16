@@ -6,6 +6,9 @@ import jobsRouter from './routes/jobs.js';
 import authRouter from "./routes/auth.js";
 import proposalsRouter from './routes/proposals.js';
 import contractsRouter from "./routes/contracts.js";
+import milestonesRouter from './routes/milestones.js';
+import webhooksRouter from './routes/webhooks.js';
+import connectRouter from './routes/connect.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -14,6 +17,15 @@ const PORT = Number(process.env.PORT) || 4000;
 // Middleware (order matters!)
 // ============================================================
 app.use(cors({ origin: ['http://localhost:3000'], credentials: true }));
+
+// 2. RAW BODY for the Stripe webhook ONLY.
+//    MUST come before express.json(), because the webhook signature
+//    is computed over the raw bytes — parsed JSON breaks verification.
+app.use(
+  '/api/webhooks/stripe',
+  express.raw({ type: 'application/json' })
+);
+
 app.use(express.json({ limit: '1mb' }));
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
@@ -43,6 +55,9 @@ app.use('/api/auth', authRouter);
 app.use('/api/jobs', jobsRouter);
 app.use('/api/proposals', proposalsRouter);
 app.use('/api/contracts', contractsRouter);
+app.use('/api', milestonesRouter);
+app.use('/api/webhooks', webhooksRouter);
+app.use('/api/connect', connectRouter);
 
 // ============================================================
 // Error handler (must be last)

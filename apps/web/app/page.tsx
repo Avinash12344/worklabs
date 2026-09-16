@@ -24,6 +24,11 @@ export default function HomePage() {
 )}
             {loading ? null : user ? (
               <>
+              {user.role === 'freelancer' && (
+  <Link href="/settings/payments" className="text-slate-700 hover:text-slate-900">
+    Payments
+  </Link>
+)}
                 <Link
                   href="/dashboard"
                   className="text-slate-700 hover:text-slate-900"

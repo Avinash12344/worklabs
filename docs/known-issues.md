@@ -25,3 +25,37 @@ now. Before production:
 - Enable RLS on all tables
 - Write policies for authenticated users
 - Test that anon-key access cannot read/write forbidden data
+
+## 6. Idempotency key missing on fund endpoint
+If a client clicks "Fund" twice and both PaymentIntents succeed, we charge
+them twice. Fix: check for a `pending` escrow_hold payment before creating a
+new intent, or use a Stripe idempotency key.
+
+## 7. Webhook idempotency not enforced
+If Stripe sends the same event twice (network retries), our UPDATE is safe
+(naturally idempotent), but future handlers that increment counters or send
+emails will need a `webhook_events` table with a unique constraint.
+
+## 8. No Connect onboarding yet
+Freelancers cannot receive payments until they complete Stripe Connect
+Express onboarding. Session Day 5 Part 3 covers this.
+
+## 9. No retry for failed transfers
+If a transfer fails (e.g., freelancer not onboarded), we mark the payment
+`failed` but don't automatically retry. Add: a cron job or admin endpoint
+that scans for `failed` payments with `type='release'` and retries them.
+
+## 10. No webhook for transfer.created
+We update `payments.stripe_transfer_id` synchronously after calling Stripe.
+If we crash between the Stripe call and the DB update, we lose track.
+Fix: handle `transfer.created` webhook to update the record authoritatively.
+
+## 11. No SCA / 3DS handling for transfers
+Transfers to some accounts may require SCA. Not handled yet.
+
+## 14. Stripe Connect is not available for Indian platforms
+Stripe Connect (and its Express onboarding) is not available for platforms
+registered in India. Our test platform is registered in the US, so we create
+US-based test connected accounts. For a production application targeting India,
+we must migrate to a payment provider that supports Indian marketplaces, such
+as Razorpay or Cashfree.
