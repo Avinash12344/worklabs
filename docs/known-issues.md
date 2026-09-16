@@ -59,3 +59,8 @@ registered in India. Our test platform is registered in the US, so we create
 US-based test connected accounts. For a production application targeting India,
 we must migrate to a payment provider that supports Indian marketplaces, such
 as Razorpay or Cashfree.
+
+## 15. Cache invalidation is pattern-based
+We use `cacheDelPattern('jobs:list:*')` with Redis KEYS. In production with
+many keys this blocks Redis (O(N)). Fix: use SCAN with cursor iteration, or
+track keys in a Redis set for targeted deletion.

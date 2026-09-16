@@ -58,6 +58,15 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
       throw new HttpError(500, `Failed to create profile: ${profileError.message}`);
     }
 
+
+    // Queue welcome email (fire-and-forget)
+await emailQueue.add('welcome', {
+  to: email,
+  subject: 'Welcome to WorkLabs',
+  template: 'welcome',
+  data: { fullName: full_name, role },
+});
+
     res.status(201).json({
       user: {
         id: authData.user.id,
@@ -72,13 +81,6 @@ router.post('/signup', async (req: Request, res: Response, next: NextFunction) =
   }
 
   
-    // Queue welcome email (fire-and-forget)
-await emailQueue.add('welcome', {
-  to: email,
-  subject: 'Welcome to WorkLabs',
-  template: 'welcome',
-  data: { fullName: full_name, role },
-});
 });
 
 // ============================================================

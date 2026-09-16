@@ -5,7 +5,8 @@ import {
   createJobSchema,
   updateJobSchema,
 } from "@worklabs/shared";
-import {requireAuth} from "../middleware/auth.js"
+import {requireAuth} from "../middleware/auth.js";
+import { cacheGet, cacheSet, cacheDelPattern } from '../lib/cache.js';
 
 const router = Router();
 
@@ -15,15 +16,23 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const status = (req.query.status as string) || 'open';
+    const cacheKey = `jobs:list:status=${status}:limit=20`;
 
+    // 1. Try cache
+    const cached = await cacheGet<{ jobs: unknown[]; count: number }>(cacheKey);
+    if (cached) {
+      console.log(`[cache] HIT ${cacheKey}`);
+      return res.json(cached);
+    }
+    console.log(`[cache] MISS ${cacheKey}`);
+
+    // 2. Cache miss — hit DB
     const { data, error } = await supabase
       .from('jobs')
-      .select(
-        `
+      .select(`
         id, title, description, budget_min, budget_max, status, deadline, created_at,
         client:users!jobs_client_id_fkey ( id, full_name, avatar_url )
-      `
-      )
+      `)
       .eq('status', status)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
@@ -31,7 +40,12 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error) throw new Error(`Supabase: ${error.message}`);
 
-    res.json({ jobs: data, count: data?.length ?? 0 });
+    const payload = { jobs: data, count: data?.length ?? 0 };
+
+    // 3. Save to cache
+    await cacheSet(cacheKey, payload, 60);
+
+    res.json(payload);
   } catch (err) {
     next(err);
   }
@@ -43,6 +57,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { id } = req.params;
+    const cacheKey = `jobs:detail:${id}`;
+
+    const cached = await cacheGet<{ job: unknown }>(cacheKey);
+    if (cached) {
+      console.log(`[cache] HIT ${cacheKey}`);
+      return res.json(cached);
+    }
+    console.log(`[cache] MISS ${cacheKey}`);
 
     const { data, error } = await supabase
       .from('jobs')
@@ -58,6 +80,10 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
     if (error) throw new Error(`Supabase: ${error.message}`);
     if (!data) throw new HttpError(404, 'Job not found');
+
+
+    const payload = { job: data };
+    await cacheSet(cacheKey, payload, 120); // 2 min TTL for detail
 
     res.json({ job: data });
   } catch (err) {
@@ -91,6 +117,8 @@ router.post('/', requireAuth, async (req: Request, res: Response, next: NextFunc
 
     if (error) throw new Error(`Supabase: ${error.message}`);
 
+    await cacheDelPattern('jobs:list:*');
+    
     res.status(201).json({ job: data });
   } catch (err) {
     next(err);
@@ -165,6 +193,7 @@ router.delete('/:id', async (req: Request, res: Response, next: NextFunction) =>
     if (error) throw new Error(`Supabase: ${error.message}`);
     if (!data) throw new HttpError(404, 'Job not found');
 
+    await cacheDel(`jobs:detail:${id}`);
     res.json({ success: true, id: data.id });
   } catch (err) {
     next(err);

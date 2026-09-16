@@ -11,7 +11,9 @@
     "strict": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+"jsxImportSource": "react"
   },
   "include": ["src/**/*"]
 }

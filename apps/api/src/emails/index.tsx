@@ -1,6 +1,6 @@
 import { render } from '@react-email/render';
 import { WelcomeEmail } from './welcome.js';
-import { ProposalReceivedEmail } from './proposal-received.js';
+import { ProposalReceivedEmail } from './proposal-recieved.js';
 import { MilestoneApprovedEmail } from './milestone-approved.js';
 
 type Rendered = { html: string; subject: string };

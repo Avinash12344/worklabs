@@ -63,24 +63,9 @@ router.post(
         throw new Error(`Supabase: ${error.message}`);
       }
 
-      res.status(201).json({ proposal: data });
-    } catch (err) {
-      next(err);
-    }
-
-    / After res.status(201).json({ proposal: data }), or before:
+      // After res.status(201).json({ proposal: data }), or before:
 // Fetch client info
-const { data: job } = await supabase
-  .from('jobs')
-  .select('title, client:users!jobs_client_id_fkey ( email, full_name )')
-  .eq('id', job_id)
-  .single();
 
-const { data: freelancer } = await supabase
-  .from('users')
-  .select('full_name')
-  .eq('id', req.user.id)
-  .single();
 
 if (job && freelancer) {
   const client = job.client as { email: string; full_name: string } | null;
@@ -99,6 +84,13 @@ if (job && freelancer) {
     });
   }
 }
+
+      res.status(201).json({ proposal: data });
+    } catch (err) {
+      next(err);
+    }
+
+    
   }
 );
 

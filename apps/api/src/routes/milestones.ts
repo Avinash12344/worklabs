@@ -254,12 +254,7 @@ router.post(
 
       await attemptTransferForMilestone(id);
 
-      res.json({ success: true });
-    } catch (err) {
-      next(err);
-    }
-
-   
+      
 
 // After approve_milestone rpc:
 const { data: ms } = await supabase
@@ -291,6 +286,12 @@ if (ms) {
     });
   }
 }
+      res.json({ success: true });
+    } catch (err) {
+      next(err);
+    }
+
+   
   }
 );
 
