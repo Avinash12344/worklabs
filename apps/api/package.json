@@ -6,7 +6,8 @@
   "main": "src/index.ts",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed": "tsx scripts/seed.ts"
   },
   "dependencies": {
     "@react-email/components": "^1.0.12",

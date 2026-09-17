@@ -74,6 +74,12 @@ router.post(
       // After res.status(201).json({ proposal: data }), or before:
 // Fetch client info
 
+const { data: freelancer } = await supabase
+  .from('users')
+  .select('full_name')
+  .eq('id', req.user.id)
+  .single();
+
 
 if (job && freelancer) {
   const client = job.client as { email: string; full_name: string } | null;
