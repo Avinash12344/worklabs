@@ -3,8 +3,16 @@ import { supabase } from '../lib/supabase.js';
 import { HttpError } from '../lib/http-error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { stripe } from '../lib/stripe.js';
+import { rateLimit } from "../middleware/rate-limit.js";
 
 const router = Router();
+
+const fundLimiter = rateLimit({
+  name: 'fund-contract',
+  capacity: 5,
+  refillRate: 1 / 300,
+  keyBy: 'user',
+});
 
 // ============================================================
 // GET /api/contracts — all contracts for current user
@@ -78,6 +86,7 @@ router.get('/:id', requireAuth, async (req: Request, res: Response, next: NextFu
 router.post(
   '/:id/fund',
   requireAuth,
+  fundLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'Not authenticated');

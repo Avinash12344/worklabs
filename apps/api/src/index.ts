@@ -10,6 +10,7 @@ import milestonesRouter from './routes/milestones.js';
 import webhooksRouter from './routes/webhooks.js';
 import connectRouter from './routes/connect.js';
 import { startEmailWorker } from './workers/email-worker.js';
+import { rateLimit } from './middleware/rate-limit.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -36,6 +37,11 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   });
   next();
 });
+app.set('trust proxy', 1);
+app.use(
+  '/api',
+  rateLimit({ name: 'global', capacity: 300, refillRate: 5, keyBy: 'ip' })
+);
 
 // ============================================================
 // Routes

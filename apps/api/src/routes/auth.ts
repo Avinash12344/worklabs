@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase.js';
 import { HttpError } from '../lib/http-error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { emailQueue } from '../lib/queues.js';
+import { rateLimit } from '../middleware/rate-limit.js';
 
 const router = Router();
 
@@ -20,10 +21,22 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const loginLimiter = rateLimit({
+  name: 'login',
+  capacity: 5,
+  refillRate: 1 / 180, // 1 token every 3 minutes
+});
+
+const signupLimiter = rateLimit({
+  name: 'signup',
+  capacity: 3,
+  refillRate: 1 / 3600, // 1 per hour
+});
+
 // ============================================================
 // POST /api/auth/signup
 // ============================================================
-router.post('/signup', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/signup', signupLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const parsed = signupSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -86,7 +99,7 @@ await emailQueue.add('welcome', {
 // ============================================================
 // POST /api/auth/login
 // ============================================================
-router.post('/login', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {

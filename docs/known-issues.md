@@ -64,3 +64,24 @@ as Razorpay or Cashfree.
 We use `cacheDelPattern('jobs:list:*')` with Redis KEYS. In production with
 many keys this blocks Redis (O(N)). Fix: use SCAN with cursor iteration, or
 track keys in a Redis set for targeted deletion.
+
+## 16. Rate limiter is fail-open
+If Redis is down, the rate limiter lets requests through. This is
+intentional for availability, but should be reviewed for payment endpoints
+where fail-closed is safer.
+
+## 17. Rate limiter does not store whitelist
+No whitelist exists for our own testing or trusted partners. Consider
+adding a `SKIP_RATE_LIMIT_IPS` env var for internal use.
+
+## 18. Redis KEYS in reset endpoint
+`redis.keys('ratelimit:*')` blocks Redis at scale. Dev-only; fine.
+In production, use SCAN with a cursor.
+
+## 19. Distance uses Haversine in application code
+We compute distance in Node, not Postgres, because our dataset is small.
+At >100K jobs, migrate to PostGIS with a GIST index for ST_DWithin queries.
+
+## 21. Google Maps abandoned due to India billing requirement
+Google Cloud requires ₹3000 minimum prepayment in India for new accounts.
+Not viable for development. Migrated to Mapbox (or geolocation-only).

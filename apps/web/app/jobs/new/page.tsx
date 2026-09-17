@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { createJobSchema } from '@worklabs/shared';
+import { LocationPicker, LocationValue } from '@/components/location-picker';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -21,6 +22,7 @@ export default function NewJobPage() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [locationData, setLocationData] = useState<LocationValue | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -28,11 +30,16 @@ export default function NewJobPage() {
     setServerError(null);
 
     const payload = {
-      title,
-      description,
-      budget_min: Number(budgetMin) * 100,  // rupees → paise
-      budget_max: Number(budgetMax) * 100,
-    };
+  title,
+  description,
+  budget_min: Number(budgetMin) * 100,
+  budget_max: Number(budgetMax) * 100,
+  ...(locationData && {
+    location: locationData.location,
+    latitude: locationData.latitude,
+    longitude: locationData.longitude,
+  }),
+};
 
     // Client-side validation using the SAME schema the backend uses
     const parsed = createJobSchema.safeParse(payload);
@@ -162,7 +169,22 @@ export default function NewJobPage() {
               )}
             </div>
           </div>
-
+<div>
+  <label className="block text-sm font-medium text-slate-700">
+    Location (optional)
+  </label>
+  <div className="mt-1">
+    <LocationPicker
+      value={locationData?.location ?? ''}
+      onChange={setLocationData}
+    />
+  </div>
+  {locationData && (
+    <p className="mt-1 text-xs text-slate-500">
+      📍 {locationData.latitude.toFixed(4)}, {locationData.longitude.toFixed(4)}
+    </p>
+  )}
+</div>
           <button
             type="submit"
             disabled={submitting}

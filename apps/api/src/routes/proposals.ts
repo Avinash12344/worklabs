@@ -4,8 +4,16 @@ import { HttpError } from '../lib/http-error.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { createProposalSchema } from '@worklabs/shared';
 import { emailQueue } from '../lib/queues.js';
+import { rateLimit } from "../middleware/rate-limit.js";
 
 const router = Router();
+
+const proposalLimiter = rateLimit({
+  name: 'proposal',
+  capacity: 20,
+  refillRate: 1 / 300, // 1 per 5 min
+  keyBy: 'user',
+});
 
 // ============================================================
 // POST /api/proposals — freelancer submits a proposal
@@ -101,6 +109,7 @@ router.get(
   '/me',
   requireAuth,
   requireRole('freelancer'),
+  proposalLimiter,
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!req.user) throw new HttpError(401, 'Not authenticated');

@@ -7,8 +7,17 @@ import {
 } from "@worklabs/shared";
 import {requireAuth} from "../middleware/auth.js";
 import { cacheGet, cacheSet, cacheDelPattern } from '../lib/cache.js';
+import { rateLimit } from '../middleware/rate-limit.js';
+import { haversineKm } from '../lib/geo.js';
 
 const router = Router();
+
+const createJobLimiter = rateLimit({
+  name: 'create-job',
+  capacity: 30,
+  refillRate: 1 / 120, // 1 per 2 minutes
+  keyBy: 'user',       // per user, not per IP
+});
 
 // ============================================================
 // GET /api/jobs — list jobs
@@ -16,9 +25,12 @@ const router = Router();
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const status = (req.query.status as string) || 'open';
-    const cacheKey = `jobs:list:status=${status}:limit=20`;
+    const lat = req.query.lat ? Number(req.query.lat) : null;
+    const lng = req.query.lng ? Number(req.query.lng) : null;
+    const radiusKm = req.query.radius_km ? Number(req.query.radius_km) : null;
 
-    // 1. Try cache
+    const cacheKey = `jobs:list:status=${status}:limit=20:lat=${lat ?? ''}:lng=${lng ?? ''}:r=${radiusKm ?? ''}`;
+
     const cached = await cacheGet<{ jobs: unknown[]; count: number }>(cacheKey);
     if (cached) {
       console.log(`[cache] HIT ${cacheKey}`);
@@ -26,23 +38,40 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     }
     console.log(`[cache] MISS ${cacheKey}`);
 
-    // 2. Cache miss — hit DB
     const { data, error } = await supabase
       .from('jobs')
       .select(`
         id, title, description, budget_min, budget_max, status, deadline, created_at,
+        location, latitude, longitude,
         client:users!jobs_client_id_fkey ( id, full_name, avatar_url )
       `)
       .eq('status', status)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(100); // fetch more, filter down
 
     if (error) throw new Error(`Supabase: ${error.message}`);
 
-    const payload = { jobs: data, count: data?.length ?? 0 };
+    let jobs = data ?? [];
 
-    // 3. Save to cache
+    // Apply distance filter if requested
+    if (lat !== null && lng !== null && radiusKm !== null) {
+      jobs = jobs.filter((job) => {
+        if (job.latitude == null || job.longitude == null) return false;
+        const distance = haversineKm(lat, lng, job.latitude, job.longitude);
+        (job as any).distance_km = Math.round(distance * 10) / 10;
+        return distance <= radiusKm;
+      });
+    }
+
+    // Sort by distance if filtering
+    if (lat !== null && lng !== null && radiusKm !== null) {
+      jobs.sort((a, b) => (a as any).distance_km - (b as any).distance_km);
+    }
+
+    const limited = jobs.slice(0, 20);
+    const payload = { jobs: limited, count: limited.length };
+
     await cacheSet(cacheKey, payload, 60);
 
     res.json(payload);
@@ -68,12 +97,11 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 
     const { data, error } = await supabase
       .from('jobs')
-      .select(
-        `
-        id, title, description, budget_min, budget_max, status, deadline, created_at, updated_at,
-        client:users!jobs_client_id_fkey ( id, full_name, avatar_url )
-      `
-      )
+      .select(`
+  id, title, description, budget_min, budget_max, status, deadline, created_at,
+  location, latitude, longitude,
+  client:users!jobs_client_id_fkey ( id, full_name, avatar_url )
+`)
       .eq('id', id)
       .is('deleted_at', null)
       .maybeSingle();
@@ -94,7 +122,7 @@ router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
 // ============================================================
 // POST /api/jobs — create job
 // ============================================================
-router.post('/', requireAuth, async (req: Request, res: Response, next: NextFunction) => {
+router.post('/', requireAuth, createJobLimiter, async (req: Request, res: Response, next: NextFunction) => {
   try {
     if (!req.user) throw new HttpError(401, 'Not authenticated');
 

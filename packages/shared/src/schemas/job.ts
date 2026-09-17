@@ -2,15 +2,14 @@ import { z } from 'zod';
 
 export const createJobSchema = z
   .object({
-    title: z.string().trim().min(3, 'Title must be at least 3 characters').max(200),
-    description: z
-      .string()
-      .trim()
-      .min(10, 'Description must be at least 10 characters')
-      .max(10000),
-    budget_min: z.number().int('Budget must be an integer').nonnegative(),
-    budget_max: z.number().int('Budget must be an integer').positive(),
+    title: z.string().trim().min(3).max(200),
+    description: z.string().trim().min(10).max(10000),
+    budget_min: z.number().int().nonnegative(),
+    budget_max: z.number().int().positive(),
     deadline: z.string().datetime().nullable().optional(),
+    location: z.string().trim().max(300).optional(),
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
   })
   .refine((data) => data.budget_max >= data.budget_min, {
     message: 'budget_max must be greater than or equal to budget_min',
