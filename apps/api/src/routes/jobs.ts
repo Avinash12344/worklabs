@@ -6,7 +6,7 @@ import {
   updateJobSchema,
 } from "@worklabs/shared";
 import {requireAuth} from "../middleware/auth.js";
-import { cacheGet, cacheSet, cacheDelPattern } from '../lib/cache.js';
+import { cacheGet, cacheSet, cacheDelPattern, cacheDel } from '../lib/cache.js';
 import { rateLimit } from '../middleware/rate-limit.js';
 import { haversineKm } from '../lib/geo.js';
 
@@ -73,6 +73,77 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     const payload = { jobs: limited, count: limited.length };
 
     await cacheSet(cacheKey, payload, 60);
+
+    res.json(payload);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ============================================================
+// GET /api/jobs/search?q=react&min_budget=...&max_budget=...
+// Full-text search with filters
+// ============================================================
+router.get('/search', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const q = ((req.query.q as string) || '').trim();
+    const minBudget = req.query.min_budget ? Number(req.query.min_budget) : null;
+    const maxBudget = req.query.max_budget ? Number(req.query.max_budget) : null;
+    const status = (req.query.status as string) || 'open';
+    const limit = Math.min(Number(req.query.limit) || 20, 50);
+
+    const cacheKey = `jobs:search:q=${q}:min=${minBudget ?? ''}:max=${maxBudget ?? ''}:s=${status}:l=${limit}`;
+
+    const cached = await cacheGet<{ jobs: unknown[]; count: number }>(cacheKey);
+    if (cached) {
+      console.log(`[cache] HIT ${cacheKey}`);
+      return res.json(cached);
+    }
+    console.log(`[cache] MISS ${cacheKey}`);
+
+    let query = supabase
+      .from('jobs')
+      .select(`
+        id, title, description, budget_min, budget_max, status, deadline, created_at,
+        location, latitude, longitude,
+        client:users!jobs_client_id_fkey ( id, full_name, avatar_url )
+      `)
+      .eq('status', status)
+      .is('deleted_at', null);
+
+    if (minBudget !== null) query = query.gte('budget_max', minBudget);
+    if (maxBudget !== null) query = query.lte('budget_min', maxBudget);
+
+    if (q) {
+      const safeQ = q.replace(/'/g, "''");
+      query = query.textSearch('search_vector', safeQ, {
+        type: 'websearch',
+        config: 'english',
+      });
+    }
+
+    const { data, error } = await query
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw new Error(`Supabase: ${error.message}`);
+
+    let jobs = data ?? [];
+
+    // Simple relevance: title matches first
+    if (q) {
+      const lowerQ = q.toLowerCase();
+      jobs = [...jobs].sort((a, b) => {
+        const aT = a.title.toLowerCase().includes(lowerQ);
+        const bT = b.title.toLowerCase().includes(lowerQ);
+        if (aT && !bT) return -1;
+        if (!aT && bT) return 1;
+        return 0;
+      });
+    }
+
+    const payload = { jobs, count: jobs.length };
+    await cacheSet(cacheKey, payload, 120);
 
     res.json(payload);
   } catch (err) {

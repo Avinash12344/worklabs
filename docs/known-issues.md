@@ -101,3 +101,8 @@ router for cleanliness.
 
 ## 35. No pagination on reviews
 Reviews are capped at 50. Add cursor-based pagination when users have more.
+
+## 36. Search ranking is heuristic
+Ranked in Node by title match heuristic. Real ranking uses
+`ts_rank(search_vector, tsquery)` in SQL. Add a Postgres function returning
+ranked results when scaling beyond thousands of jobs.

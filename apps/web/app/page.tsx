@@ -18,7 +18,9 @@ export default function HomePage() {
             <Link href="/jobs" className="text-slate-700 hover:text-slate-900">
               Jobs
             </Link>
-            
+  <Link href="/search" className="text-slate-700 hover:text-slate-900">
+  Search
+</Link>          
            {user && (
   <>
     <NotificationBell />
