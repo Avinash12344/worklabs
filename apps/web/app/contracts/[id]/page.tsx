@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useEffect, useState, useCallback, FormEvent } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { ReviewSection } from '@/components/review-form';
 import { ContractChat } from '@/components/contract-chat';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
@@ -37,38 +38,63 @@ export default function ContractDetailPage() {
   const params = useParams<{ id: string }>();
   const contractId = params.id;
   const { user, token, loading } = useAuth();
+
   const [contract, setContract] = useState<Contract | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  // Milestone create form state
   const [newMsTitle, setNewMsTitle] = useState('');
-const [newMsDesc, setNewMsDesc] = useState('');
-const [newMsAmount, setNewMsAmount] = useState('');
-const [msError, setMsError] = useState<string | null>(null);
-const [creatingMs, setCreatingMs] = useState(false);
+  const [newMsDesc, setNewMsDesc] = useState('');
+  const [newMsAmount, setNewMsAmount] = useState('');
+  const [msError, setMsError] = useState<string | null>(null);
+  const [creatingMs, setCreatingMs] = useState(false);
 
 const [refreshKey, setRefreshKey] = useState(0);
-const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-async function milestoneAction(milestoneId: string, action: 'start' | 'submit' | 'approve' | 'reject') {
-  setActionLoading(`${milestoneId}:${action}`);
-  try {
-    const res = await fetch(`${API_URL}/api/milestones/${milestoneId}/${action}`, {
-      method: 'POST',
+const fetchContract = useCallback(async () => {
+    if (!token) return;
+    const res = await fetch(`${API_URL}/api/contracts/${contractId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || `Failed to ${action}`);
+      setError(err.error || 'Failed to load');
+      return;
     }
+    const data = await res.json();
+    setContract(data.contract);
+  }, [contractId, token]);
 
-    await fetchContract();
-  } catch (err) {
-    alert(err instanceof Error ? err.message : 'Something went wrong');
-  } finally {
-    setActionLoading(null);
+  useEffect(() => {
+    if (loading || !token) return;
+    fetchContract();
+  }, [loading, token, fetchContract]);
+
+ // ─── Milestone actions ───
+  async function milestoneAction(
+    milestoneId: string,
+    action: 'start' | 'submit' | 'approve' | 'reject'
+  ) {
+    setActionLoading(`${milestoneId}:${action}`);
+    try {
+      const res = await fetch(`${API_URL}/api/milestones/${milestoneId}/${action}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `Failed to ${action}`);
+      }
+
+      await fetchContract();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setActionLoading(null);
+    }
   }
-}
 
   useEffect(() => {
     if (loading || !token) return;
@@ -88,53 +114,47 @@ async function milestoneAction(milestoneId: string, action: 'start' | 'submit' |
     fetchContract();
   }, [contractId, token, loading, refreshKey]);
 
+  // ─── Create milestone ───
   async function handleCreateMilestone(e: FormEvent) {
-  e.preventDefault();
-  setMsError(null);
-  setCreatingMs(true);
+    e.preventDefault();
+    setMsError(null);
+    setCreatingMs(true);
 
-  function refetchContract() {
-  return new Promise<void>((resolve) => {
-    setRefreshKey((k) => k + 1);
-    resolve();
-  });
-}
+    try {
+      const res = await fetch(
+        `${API_URL}/api/contracts/${contractId}/milestones`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            title: newMsTitle,
+            description: newMsDesc || undefined,
+            amount: Number(newMsAmount) * 100,
+          }),
+        }
+      );
 
-
-  try {
-    const res = await fetch(
-      `${API_URL}/api/contracts/${contractId}/milestones`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          title: newMsTitle,
-          description: newMsDesc || undefined,
-          amount: Number(newMsAmount) * 100,
-        }),
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to create milestone');
       }
-    );
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.error || 'Failed to create milestone');
+      setNewMsTitle('');
+      setNewMsDesc('');
+      setNewMsAmount('');
+      await fetchContract();
+    } catch (err) {
+      setMsError(err instanceof Error ? err.message : 'Something went wrong');
+    } finally {
+      setCreatingMs(false);
     }
-
-    setNewMsTitle('');
-    setNewMsDesc('');
-    setNewMsAmount('');
-    await refetchContract();
-  } catch (err) {
-    setMsError(err instanceof Error ? err.message : 'Something went wrong');
-  } finally {
-    setCreatingMs(false);
   }
-}
 
 
+  // ─── Guards — before touching user.id / contract.id ───
   if (loading) {
     return (
       <main className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
@@ -147,7 +167,7 @@ async function milestoneAction(milestoneId: string, action: 'start' | 'submit' |
     return (
       <main className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
         <Link href="/login" className="text-slate-900 underline">
-          Log in
+          Log in to view this contract
         </Link>
       </main>
     );
@@ -169,14 +189,14 @@ async function milestoneAction(milestoneId: string, action: 'start' | 'submit' |
   if (!contract) {
     return (
       <main className="min-h-screen bg-slate-50 p-6 flex items-center justify-center">
-        <p className="text-slate-600">Loading...</p>
+        <p className="text-slate-600">Loading contract…</p>
       </main>
     );
   }
 
+  // ─── Derived ───
   const isClient = user.id === contract.client.id;
   const isFreelancer = user.id === contract.freelancer.id;
-
 
   return (
     <main className="min-h-screen bg-slate-50 p-6">
@@ -360,6 +380,9 @@ async function milestoneAction(milestoneId: string, action: 'start' | 'submit' |
       </div>
     </form>
   )}
+  {contract.status === 'completed' && (
+  <ReviewSection contractId={contractId} />
+)}
 </div>
     </main>
   );

@@ -97,6 +97,32 @@ await emailQueue.add('welcome', {
 });
 
 // ============================================================
+// GET /api/users/:id/public — public profile (no auth required)
+// ============================================================
+router.get(
+  '/users/:id/public',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, role, avatar_url, created_at')
+        .eq('id', id)
+        .is('deleted_at', null)
+        .maybeSingle();
+
+      if (error) throw new Error(`Supabase: ${error.message}`);
+      if (!data) throw new HttpError(404, 'User not found');
+
+      res.json({ user: data });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ============================================================
 // POST /api/auth/login
 // ============================================================
 router.post('/login', loginLimiter, async (req: Request, res: Response, next: NextFunction) => {

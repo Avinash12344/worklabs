@@ -13,6 +13,7 @@ import { startEmailWorker } from './workers/email-worker.js';
 import { rateLimit } from './middleware/rate-limit.js';
 import messagesRouter from './routes/message.js';
 import notificationsRouter from './routes/notifications.js';
+import reviewsRouter from './routes/reviews.js';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -69,6 +70,7 @@ app.use('/api/webhooks', webhooksRouter);
 app.use('/api/connect', connectRouter);
 app.use('/api', messagesRouter);
 app.use('/api/notifications', notificationsRouter);
+app.use('/api', reviewsRouter);
 
 // ============================================================
 // Error handler (must be last)

@@ -85,3 +85,19 @@ At >100K jobs, migrate to PostGIS with a GIST index for ST_DWithin queries.
 ## 21. Google Maps abandoned for Mapbox
 Google Cloud requires ₹3000 minimum prepayment in India. Migrated to Mapbox
 (100K free geocoding/month, no prepayment).
+
+## 32. Reviews are public immediately
+Real marketplaces hide reviews until both parties submit (or 14 days pass)
+to prevent retaliation. We show immediately for simplicity. Future: add a
+`revealed_at` column and a background job.
+
+## 33. Profile aggregate computed on the fly
+`GET /users/:id/reviews` computes average in Node. At scale, precompute with
+a materialized view or a `users.average_rating` column updated by trigger.
+
+## 34. Public profile route lives under /api/auth
+`GET /api/auth/users/:id/public` should move to a dedicated `/api/users`
+router for cleanliness.
+
+## 35. No pagination on reviews
+Reviews are capped at 50. Add cursor-based pagination when users have more.

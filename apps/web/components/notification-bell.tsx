@@ -149,6 +149,11 @@ function describe(n: Notification): { href: string; text: string } {
         href: `/contracts/${p.contract_id}`,
         text: `Payment released: ₹${((p.amount as number) / 100).toLocaleString()}`,
       };
+    case 'review_received':
+      return {
+    href: `/contracts/${p.contract_id}`,
+    text: `${p.reviewer_name} gave you a ${p.rating}-star review`,
+  };  
     default:
       return { href: '/', text: 'New notification' };
   }
