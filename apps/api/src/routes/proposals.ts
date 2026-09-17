@@ -5,6 +5,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { createProposalSchema } from '@worklabs/shared';
 import { emailQueue } from '../lib/queues.js';
 import { rateLimit } from "../middleware/rate-limit.js";
+import { createNotification } from '../lib/notifications.js';
 
 const router = Router();
 
@@ -38,11 +39,16 @@ router.post(
 
       // 1. Verify the job exists and is open
       const { data: job, error: jobError } = await supabase
-        .from('jobs')
-        .select('id, status')
-        .eq('id', job_id)
-        .is('deleted_at', null)
-        .maybeSingle();
+  .from('jobs')
+  .select(
+    `
+    id, status, title,
+    client:users!jobs_client_id_fkey ( id, email, full_name )
+  `
+  )
+  .eq('id', job_id)
+  .is('deleted_at', null)
+  .maybeSingle();
 
       if (jobError) throw new Error(`Supabase: ${jobError.message}`);
       if (!job) throw new HttpError(404, 'Job not found');
@@ -80,6 +86,23 @@ const { data: freelancer } = await supabase
   .eq('id', req.user.id)
   .single();
 
+  // Notify the job's client
+const clientId = (job.client as { id: string } | null)?.id;
+if (clientId) {
+  await createNotification({
+    userId: clientId,
+    type: 'proposal_received',
+    payload: {
+      job_id: job_id,
+      job_title: job.title,
+      freelancer_id: req.user.id,
+      freelancer_name: freelancer?.full_name ?? 'A freelancer',
+      proposal_id: data.id,
+      bid_amount,
+    },
+  });
+}
+// Wait — our current query only selects email + full_name. Add id.
 
 if (job && freelancer) {
   const client = job.client as { email: string; full_name: string } | null;

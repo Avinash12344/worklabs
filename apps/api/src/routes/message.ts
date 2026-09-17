@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase.js';
 import { HttpError } from '../lib/http-error.js';
 import { requireAuth } from '../middleware/auth.js';
 import { sendMessageSchema } from '@worklabs/shared';
+import { createNotification } from '../lib/notifications.js';
 
 const router = Router();
 
@@ -52,7 +53,7 @@ router.get(
         .limit(200);
 
       if (error) throw new Error(`Supabase: ${error.message}`);
-
+// Determine recipient (the other party)
       res.json({ messages: data ?? [] });
     } catch (err) {
       next(err);
@@ -71,15 +72,16 @@ router.post(
       if (!req.user) throw new HttpError(401, 'Not authenticated');
       const { contractId } = req.params;
 
-      await assertContractParty(contractId, req.user.id);
+     const contract = await assertContractParty(contractId, req.user.id);
 
-      const parsed = sendMessageSchema.safeParse(req.body);
+      const parsed = sendMessageSchema.safeParse(req.body);   // ← parsed defined here
       if (!parsed.success) {
         return res.status(400).json({
           error: 'Validation failed',
           details: parsed.error.flatten().fieldErrors,
         });
       }
+
 
       const { data, error } = await supabase
         .from('messages')
@@ -97,6 +99,27 @@ router.post(
         .single();
 
       if (error) throw new Error(`Supabase: ${error.message}`);
+ const recipientId =
+        contract.client_id === req.user.id
+          ? contract.freelancer_id
+          : contract.client_id;
+
+      const { data: sender } = await supabase
+        .from('users')
+        .select('full_name')
+        .eq('id', req.user.id)
+        .single();
+
+      await createNotification({
+        userId: recipientId,
+        type: 'message_received',
+        payload: {
+          contract_id: contractId,
+          sender_id: req.user.id,
+          sender_name: sender?.full_name ?? 'Someone',
+          preview: parsed.data.content.slice(0, 100),
+        },
+      });
 
       res.status(201).json({ message: data });
     } catch (err) {
