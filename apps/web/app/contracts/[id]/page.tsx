@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { ContractChat } from '@/components/contract-chat';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -240,6 +241,10 @@ async function milestoneAction(milestoneId: string, action: 'start' | 'submit' |
       </span>
     )}
   </div>
+
+  <div className="mt-6">
+  <ContractChat contractId={contractId} />
+</div>
 
   {contract.milestones.length === 0 ? (
     <p className="mt-3 text-sm text-slate-600">No milestones yet.</p>

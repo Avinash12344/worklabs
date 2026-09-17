@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { NotificationBell } from '@/components/notification-bell';
 
 export default function HomePage() {
   const { user, loading, logout } = useAuth();
@@ -17,10 +18,14 @@ export default function HomePage() {
             <Link href="/jobs" className="text-slate-700 hover:text-slate-900">
               Jobs
             </Link>
-            {user && (
-  <Link href="/contracts" className="text-slate-700 hover:text-slate-900">
-    Contracts
-  </Link>
+            
+           {user && (
+  <>
+    <NotificationBell />
+    <Link href="/contracts" className="text-slate-700 hover:text-slate-900">
+      Contracts
+    </Link>
+  </>
 )}
             {loading ? null : user ? (
               <>

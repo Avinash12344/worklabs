@@ -82,6 +82,6 @@ In production, use SCAN with a cursor.
 We compute distance in Node, not Postgres, because our dataset is small.
 At >100K jobs, migrate to PostGIS with a GIST index for ST_DWithin queries.
 
-## 21. Google Maps abandoned due to India billing requirement
-Google Cloud requires ₹3000 minimum prepayment in India for new accounts.
-Not viable for development. Migrated to Mapbox (or geolocation-only).
+## 21. Google Maps abandoned for Mapbox
+Google Cloud requires ₹3000 minimum prepayment in India. Migrated to Mapbox
+(100K free geocoding/month, no prepayment).

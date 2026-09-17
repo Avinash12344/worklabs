@@ -2,6 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { supabase } from '../lib/supabase.js';
 import { HttpError } from '../lib/http-error.js';
 import { requireAuth } from '../middleware/auth.js';
+import { createNotification } from '../lib/notifications.js';
+
 import {
   createMilestoneSchema,
   updateMilestoneSchema,
@@ -227,6 +229,36 @@ router.post(
 
       if (error) throw new HttpError(400, error.message);
 
+const { data: ms } = await supabase
+  .from('milestones')
+  .select(`
+    title,
+    contract:contracts!milestones_contract_id_fkey (
+      id, client_id, freelancer_id
+    )
+  `)
+  .eq('id', id)
+  .single();
+
+if (ms) {
+  const contract = ms.contract as {
+    id: string;
+    client_id: string;
+    freelancer_id: string;
+  } | null;
+  if (contract) {
+    await createNotification({
+      userId: contract.client_id,
+      type: 'milestone_submitted',
+      payload: {
+        contract_id: contract.id,
+        milestone_id: id,
+        milestone_title: ms.title,
+      },
+    });
+  }
+}
+
       res.json({ success: true });
     } catch (err) {
       next(err);
@@ -262,31 +294,31 @@ const { data: ms } = await supabase
   .select(`
     title, amount,
     contract:contracts!milestones_contract_id_fkey (
-      id,
-      freelancer:users!contracts_freelancer_id_fkey ( email, full_name )
+      id, client_id, freelancer_id
     )
   `)
   .eq('id', id)
   .single();
 
 if (ms) {
-  const contract = ms.contract as any;
-  const freelancer = contract?.freelancer;
-  if (freelancer) {
-    await emailQueue.add('milestone_approved', {
-      to: freelancer.email,
-      subject: `Milestone approved: ${ms.title}`,
-      template: 'milestone_approved',
-      data: {
-        freelancerName: freelancer.full_name,
-        milestoneTitle: ms.title,
+  const contract = ms.contract as {
+    id: string;
+    client_id: string;
+    freelancer_id: string;
+  } | null;
+  if (contract) {
+    await createNotification({
+      userId: contract.freelancer_id,
+      type: 'milestone_approved',
+      payload: {
+        contract_id: contract.id,
+        milestone_id: id,
+        milestone_title: ms.title,
         amount: ms.amount,
-        contractId: contract.id,
       },
     });
   }
-}
-      res.json({ success: true });
+}      res.json({ success: true });
     } catch (err) {
       next(err);
     }
