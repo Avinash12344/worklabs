@@ -15,6 +15,11 @@ export default function HomePage() {
             WorkLabs
           </Link>
           <nav className="flex items-center gap-4">
+            {user?.role === 'admin' && (
+  <Link href="/admin" className="text-slate-700 hover:text-slate-900">
+    Admin
+  </Link>
+)}
             <Link href="/jobs" className="text-slate-700 hover:text-slate-900">
               Jobs
             </Link>

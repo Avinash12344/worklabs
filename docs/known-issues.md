@@ -106,3 +106,13 @@ Reviews are capped at 50. Add cursor-based pagination when users have more.
 Ranked in Node by title match heuristic. Real ranking uses
 `ts_rank(search_vector, tsquery)` in SQL. Add a Postgres function returning
 ranked results when scaling beyond thousands of jobs.
+
+## 37. Ban enforcement not complete
+Adding a `banned_at` column. RLS / auth middleware doesn't yet reject banned
+users. Add a check in `requireAuth`: if banned, return 403. Do that in the
+next session.
+
+## 38. Banned users can still read
+`requireRole` blocks banned users on mutation routes. Read-only routes
+(job list, profile view) still work. Full ban requires a check in
+`requireAuth` — a DB query per request. Optimize with a Redis cache.

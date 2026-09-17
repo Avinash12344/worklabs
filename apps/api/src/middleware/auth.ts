@@ -17,10 +17,9 @@ export function requireRole(...allowedRoles: string[]) {
       return next(new HttpError(401, 'Not authenticated'));
     }
 
-    // Fetch full user from DB to check role
     supabase
       .from('users')
-      .select('role')
+      .select('role, banned_at')
       .eq('id', req.user.id)
       .is('deleted_at', null)
       .maybeSingle()
@@ -28,12 +27,13 @@ export function requireRole(...allowedRoles: string[]) {
         if (error) return next(new Error(`Supabase: ${error.message}`));
         if (!data) return next(new HttpError(404, 'User not found'));
 
+        if (data.banned_at) {
+          return next(new HttpError(403, 'Your account has been suspended'));
+        }
+
         if (!allowedRoles.includes(data.role)) {
           return next(
-            new HttpError(
-              403,
-              `This action requires one of: ${allowedRoles.join(', ')}`
-            )
+            new HttpError(403, `This action requires one of: ${allowedRoles.join(', ')}`)
           );
         }
 
