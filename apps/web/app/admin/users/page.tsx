@@ -3,6 +3,8 @@
 import { useEffect, useState, FormEvent } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
+import { showError, showSuccess } from '@/lib/toast';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -23,6 +25,10 @@ export default function AdminUsersPage() {
   const [role, setRole] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+  user: AdminUser;
+  action: 'ban' | 'unban';
+} | null>(null);
 
   async function load() {
     if (!token) return;
@@ -50,31 +56,40 @@ export default function AdminUsersPage() {
     load();
   }
 
-  async function toggleBan(user: AdminUser) {
-    if (!confirm(user.banned_at ? `Unban ${user.full_name}?` : `Ban ${user.full_name}?`)) return;
-
-    setActionLoading(user.id);
-    try {
-      const action = user.banned_at ? 'unban' : 'ban';
-      const body = action === 'ban' ? JSON.stringify({ reason: 'Admin action' }) : undefined;
-      const res = await fetch(`${API_URL}/api/admin/users/${user.id}/${action}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          ...(body ? { 'Content-Type': 'application/json' } : {}),
-        },
-        body,
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Action failed');
-      }
-      await load();
-    } catch (err) {
-      alert(err instanceof Error ? err.message : 'Something went wrong');
-    } finally {
-      setActionLoading(null);
+  async function executeBan() {
+  if (!confirmAction) return;
+  setActionLoading(confirmAction.user.id);
+  try {
+    const { user, action } = confirmAction;
+    const body =
+      action === 'ban' ? JSON.stringify({ reason: 'Admin action' }) : undefined;
+    const res = await fetch(`${API_URL}/api/admin/users/${user.id}/${action}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Action failed');
     }
+    showSuccess(action === 'ban' ? 'User banned' : 'User unbanned');
+    await load();
+  } catch (err) {
+    showError(err instanceof Error ? err.message : 'Something went wrong');
+  } finally {
+    setActionLoading(null);
+    setConfirmAction(null);
+  }
+}
+
+  function toggleBan(user: AdminUser) {
+    setConfirmAction({
+    user,
+    action: user.banned_at ? 'unban' : 'ban',
+  });
   }
 
   return (
@@ -158,6 +173,21 @@ export default function AdminUsersPage() {
           </table>
         </div>
       )}
+      <ConfirmDialog
+  open={!!confirmAction}
+  title={confirmAction?.action === 'ban' ? 'Ban this user?' : 'Unban this user?'}
+  message={
+    confirmAction?.action === 'ban'
+      ? `${confirmAction.user.full_name} won't be able to log in or take actions.`
+      : `${confirmAction?.user.full_name} will regain full access.`
+  }
+  confirmLabel={confirmAction?.action === 'ban' ? 'Ban user' : 'Unban'}
+  variant={confirmAction?.action === 'ban' ? 'danger' : 'primary'}
+  loading={!!actionLoading}
+  onConfirm={executeBan}
+  onCancel={() => setConfirmAction(null)}
+/>
     </div>
+    
   );
 }

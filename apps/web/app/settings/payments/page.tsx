@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { showError } from '@/lib/toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -45,7 +46,7 @@ export default function PaymentsSettingsPage() {
       const data = await res.json();
       window.location.href = data.url;
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Something went wrong');
+      showError(err instanceof Error ? err.message : 'Something went wrong');
       setRedirecting(false);
     }
   }

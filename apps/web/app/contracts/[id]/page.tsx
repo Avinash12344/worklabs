@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { ReviewSection } from '@/components/review-form';
 import { ContractChat } from '@/components/contract-chat';
 import { track } from '@/lib/analytics';
+import { showError } from '@/lib/toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -92,7 +93,7 @@ const fetchContract = useCallback(async () => {
       await fetchContract();
       track('milestone_action', { milestone_id: milestoneId, action });
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Something went wrong');
+      showError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setActionLoading(null);
     }

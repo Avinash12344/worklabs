@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase-browser';
+import { showError } from '@/lib/toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -139,7 +140,7 @@ useEffect(() => {
       );
       setDraft('');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Something went wrong');
+      showError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {
       setSending(false);
     }

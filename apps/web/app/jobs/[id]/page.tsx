@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { createProposalSchema } from '@worklabs/shared';
 import { track } from '@/lib/analytics';
+import { showError } from '@/lib/toast';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -75,7 +76,7 @@ async function handleAccept(proposalId: string) {
     const data = await res.json();
     router.push(`/contracts/${data.contract_id}`);
   } catch (err) {
-    alert(err instanceof Error ? err.message : 'Something went wrong');
+    showError(err instanceof Error ? err.message : 'Something went wrong');
   } finally {
     setAccepting(null);
   }

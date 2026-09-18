@@ -1,5 +1,8 @@
 import Link from "next/link";
 import {JobsFilter} from "../../components/jobs-filter.jsx"
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 type Job = {
   id: string;
@@ -48,46 +51,56 @@ export default async function JobsPage({
   return (
     <main className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold text-slate-900">Open Jobs</h1>
-          <Link
-            href="/jobs/new"
-            className="px-4 py-2 bg-slate-900 text-white rounded-md hover:bg-slate-700"
-          >
-            Post a Job
-          </Link>
-        </div>
+        <div className="flex items-center justify-between mb-6">
+  <h1 className="text-h1 text-slate-900 dark:text-slate-100">Open Jobs</h1>
+  <Link href="/jobs/new">
+    <Button>Post a Job</Button>
+  </Link>
+</div>
 
         <div className="mb-6">
           <JobsFilter />
         </div>
 
         {jobs.length === 0 ? (
-          <p className="text-slate-600">No open jobs match your filter.</p>
-        ) : (
-          <ul className="space-y-4">
-            {jobs.map((job) => (
-              <li key={job.id}>
-                <Link
-                  href={`/jobs/${job.id}`}
-                  className="block bg-white rounded-lg shadow-sm p-6 border border-slate-200 hover:shadow-md transition"
-                >
-                  <h2 className="text-xl font-semibold text-slate-900">{job.title}</h2>
-                  <p className="mt-2 text-slate-600 line-clamp-2">{job.description}</p>
-                  <div className="mt-3 flex items-center gap-4 text-sm text-slate-500">
-                    <span>₹{(job.budget_min / 100).toLocaleString()} – ₹{(job.budget_max / 100).toLocaleString()}</span>
-                    {job.location && (<><span>•</span><span>📍 {job.location}</span></>)}
-                    {(job as any).distance_km !== undefined && (
-                      <><span>•</span><span>{((job as any).distance_km).toFixed(1)} km away</span></>
-                    )}
-                    <span>•</span>
-                    <span>by {job.client.full_name}</span>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+  <p className="text-slate-600 dark:text-slate-400">No open jobs match your filter.</p>
+) : (
+  <ul className="space-y-4">
+    {jobs.map((job) => (
+      <li key={job.id}>
+        <Link href={`/jobs/${job.id}`}>
+          <Card hover padding="md">
+            <div className="flex items-start justify-between gap-4">
+              <h2 className="text-h4 text-slate-900 dark:text-slate-100">
+                {job.title}
+              </h2>
+              <Badge variant="success" size="sm">
+                {job.status}
+              </Badge>
+            </div>
+            <p className="mt-2 text-slate-600 dark:text-slate-400 line-clamp-2">
+              {job.description}
+            </p>
+            <div className="mt-3 flex items-center gap-4 text-bodySm text-slate-500 dark:text-slate-400">
+              <span>
+                ₹{(job.budget_min / 100).toLocaleString()} – ₹
+                {(job.budget_max / 100).toLocaleString()}
+              </span>
+              {job.location && (
+                <>
+                  <span>•</span>
+                  <span>📍 {job.location}</span>
+                </>
+              )}
+              <span>•</span>
+              <span>by {job.client.full_name}</span>
+            </div>
+          </Card>
+        </Link>
+      </li>
+    ))}
+  </ul>
+)}
       </div>
     </main>
   );
