@@ -3,6 +3,8 @@ import { AuthProvider } from '@/lib/auth-context';
 import './globals.css';
 import { PostHogProvider, PostHogPageTracker } from '@/lib/posthog';
 import { Toaster } from 'react-hot-toast';
+import { Header } from '@/components/layout/header';
+import { Footer } from '@/components/layout/footer';
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +14,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <NotificationsProvider>
       <PostHogProvider>
         <PostHogPageTracker />
-        {children}
+        <div className="min-h-screen flex flex-col">
+                <Header />
+                <div className="flex-1">{children}</div>
+                <Footer />
+              </div>
         <Toaster
           position="top-right"
           toastOptions={{

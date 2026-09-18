@@ -7,6 +7,9 @@ import { useAuth } from '@/lib/auth-context';
 import { createProposalSchema } from '@worklabs/shared';
 import { track } from '@/lib/analytics';
 import { showError } from '@/lib/toast';
+import { Breadcrumbs } from '@/components/layout/breadcrumbs';
+
+
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -188,7 +191,14 @@ async function handleAccept(proposalId: string) {
   const canApply = isFreelancer && !isOwner && job.status === 'open';
 
   return (
+    
     <main className="min-h-screen bg-slate-50 p-6">
+<Breadcrumbs
+  items={[
+    { label: 'Jobs', href: '/jobs' },
+    { label: job.title },
+  ]}
+/>
       <div className="max-w-3xl mx-auto">
         <Link
           href="/jobs"
