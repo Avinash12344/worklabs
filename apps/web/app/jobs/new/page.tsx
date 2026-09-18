@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { createJobSchema } from '@worklabs/shared';
 import { LocationPicker, LocationValue } from '@/components/location-picker';
+import { track } from '@/lib/analytics';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -66,6 +67,7 @@ export default function NewJobPage() {
       }
 
       router.push('/jobs');
+      track('job_created', { job_id: data.job.id, budget_max: parsed.data.budget_max });
     } catch (err) {
       setServerError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {

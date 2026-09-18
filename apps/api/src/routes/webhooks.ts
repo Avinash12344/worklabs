@@ -2,6 +2,7 @@ import { Router, Request, Response, NextFunction } from 'express';
 import Stripe from 'stripe';
 import { stripe } from '../lib/stripe.js';
 import { supabase } from '../lib/supabase.js';
+import { logger } from '../lib/logger.js';
 
 const router = Router();
 
@@ -32,11 +33,11 @@ router.post(
           WEBHOOK_SECRET
         );
       } catch (err) {
-        console.error('[webhook] signature verification failed:', err);
+        logger.error('[webhook] signature verification failed:', err);
         return res.status(400).json({ error: 'Invalid signature' });
       }
 
-      console.log(`[webhook] received: ${event.type} (${event.id})`);
+      logger.info(`[webhook] received: ${event.type} (${event.id})`);
 
       switch (event.type) {
         case 'payment_intent.succeeded': {
@@ -79,11 +80,11 @@ async function handlePaymentIntentSucceeded(pi: Stripe.PaymentIntent) {
     .eq('stripe_payment_intent_id', pi.id);
 
   if (error) {
-    console.error('[webhook] failed to update payment:', error);
+    logger.error('[webhook] failed to update payment:', error);
     throw new Error(`Supabase: ${error.message}`);
   }
 
-  console.log(`[webhook] payment succeeded: ${pi.id}`);
+  logger.info(`[webhook] payment succeeded: ${pi.id}`);
 }
 
 async function handlePaymentIntentFailed(pi: Stripe.PaymentIntent) {
@@ -101,11 +102,11 @@ async function handlePaymentIntentFailed(pi: Stripe.PaymentIntent) {
     .eq('stripe_payment_intent_id', pi.id);
 
   if (error) {
-    console.error('[webhook] failed to update failed payment:', error);
+    logger.error('[webhook] failed to update failed payment:', error);
     throw new Error(`Supabase: ${error.message}`);
   }
 
-  console.log(`[webhook] payment failed: ${pi.id} — ${reason}`);
+  logger.info(`[webhook] payment failed: ${pi.id} — ${reason}`);
 }
 
 async function handleAccountUpdated(account: Stripe.Account) {
@@ -119,11 +120,11 @@ async function handleAccountUpdated(account: Stripe.Account) {
     .eq('stripe_account_id', account.id);
 
   if (error) {
-    console.error('[webhook] failed to update profile:', error);
+    logger.error('[webhook] failed to update profile:', error);
     throw new Error(`Supabase: ${error.message}`);
   }
 
-  console.log(`[webhook] account ${account.id} ready: ${isReady}`);
+  logger.info(`[webhook] account ${account.id} ready: ${isReady}`);
 }
 
 export default router;

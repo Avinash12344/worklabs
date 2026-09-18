@@ -116,3 +116,13 @@ next session.
 `requireRole` blocks banned users on mutation routes. Read-only routes
 (job list, profile view) still work. Full ban requires a check in
 `requireAuth` — a DB query per request. Optimize with a Redis cache.
+
+## 39. No log aggregation yet
+Logs go to stdout. In production, ship to Grafana Loki or Datadog for
+search across services. Add `pino-loki` or similar transport.
+
+## 40. Sentry tracing sample rate at 10%
+Production traces 10% of transactions. Increase if you need more detail.
+
+## 41. PostHog events are minimal
+Only key business events are tracked. Add more as features ship.

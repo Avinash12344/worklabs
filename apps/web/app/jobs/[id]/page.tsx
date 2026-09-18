@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { createProposalSchema } from '@worklabs/shared';
+import { track } from '@/lib/analytics';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
@@ -152,6 +153,7 @@ async function handleAccept(proposalId: string) {
       }
 
       router.push('/dashboard');
+      track('proposal_submitted', { job_id: jobId, bid_amount: bidAmount });
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Something went wrong');
     } finally {

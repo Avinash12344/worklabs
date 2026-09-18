@@ -3,11 +3,12 @@ import { redis } from '../lib/redis.js';
 import { resend, EMAIL_FROM } from '../lib/resend.js';
 import { renderTemplate } from '../emails/index.js';
 import type { EmailJobData } from '../lib/queues.js';
+import { logger } from '../lib/logger.js';
 
 async function processEmail(job: Job<EmailJobData>) {
   const { to, subject, template, data } = job.data;
 
-  console.log(`[worker] sending ${template} → ${to}`);
+  logger.info(`[worker] sending ${template} → ${to}`);
 
   const rendered = await renderTemplate(template, data);
 
@@ -22,7 +23,7 @@ async function processEmail(job: Job<EmailJobData>) {
     throw new Error(`Resend: ${error.message}`);
   }
 
-  console.log(`[worker] sent ${template} to ${to} (id: ${result?.id})`);
+  logger.info(`[worker] sent ${template} to ${to} (id: ${result?.id})`);
 }
 
 export function startEmailWorker() {
@@ -32,17 +33,17 @@ export function startEmailWorker() {
   });
 
   worker.on('completed', (job) => {
-    console.log(`[worker] job ${job.id} completed`);
+    logger.info(`[worker] job ${job.id} completed`);
   });
 
   worker.on('failed', (job, err) => {
-    console.error(`[worker] job ${job?.id} failed:`, err.message);
+    logger.error(`[worker] job ${job?.id} failed:`, err.message);
   });
 
   worker.on('error', (err) => {
-    console.error('[worker] error:', err);
+    logger.error('[worker] error:', err);
   });
 
-  console.log('[worker] email worker started');
+  logger.info('[worker] email worker started');
   return worker;
 }

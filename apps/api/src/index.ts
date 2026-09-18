@@ -1,4 +1,6 @@
 import 'dotenv/config';
+import { initSentry, Sentry } from './lib/sentry.js';
+initSentry();
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { HttpError } from './lib/http-error.js';
@@ -15,6 +17,8 @@ import messagesRouter from './routes/message.js';
 import notificationsRouter from './routes/notifications.js';
 import reviewsRouter from './routes/reviews.js';
 import adminRouter from './routes/admin.js';
+import { logger } from './lib/logger.js';
+import { randomUUID } from 'crypto';
 
 
 const app = express();
@@ -33,12 +37,17 @@ app.use(
   express.raw({ type: 'application/json' })
 );
 
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  (req as any).id = req.headers['x-request-id'] ?? randomUUID();
+  next();
+});
+
 app.use(express.json({ limit: '1mb' }));
 app.use((req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    console.log(`[${req.method}] ${req.originalUrl} → ${res.statusCode} (${duration}ms)`);
+    logger.info(`[${req.method}] ${req.originalUrl} → ${res.statusCode} (${duration}ms)`);
   });
   next();
 });
@@ -79,15 +88,30 @@ app.use('/api/admin', adminRouter);
 // Error handler (must be last)
 // ============================================================
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  // Only capture unexpected errors — skip HttpError (intentional)
+  if (!(err instanceof HttpError)) {
+    Sentry.captureException(err, {
+      user: req.user ? { id: req.user.id, email: req.user.email } : undefined,
+      tags: { req_id: (req as any).id },
+    });
+  }
+
   if (err instanceof HttpError) {
     return res.status(err.status).json({ error: err.message });
   }
-  console.error('[error]', err);
-  res.status(500).json({ error: 'Internal Server Error', message: err.message });
+
+  logger.error({ err, req_id: (req as any).id }, 'unhandled error');
+  res.status(500).json({ error: 'Internal Server Error' });
 });
 
+if (process.env.NODE_ENV !== 'production') {
+  app.get('/api/dev/crash', () => {
+    throw new Error('Test Sentry error');
+  });
+}
+
 app.listen(PORT, () => {
-  console.log(`[api] running at http://localhost:${PORT}`);
+  logger.info(`[api] running at http://localhost:${PORT}`);
 });
 
 // Start background workers (in production, this would be a separate process)
