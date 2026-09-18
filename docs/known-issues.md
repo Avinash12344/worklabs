@@ -126,3 +126,7 @@ Production traces 10% of transactions. Increase if you need more detail.
 
 ## 41. PostHog events are minimal
 Only key business events are tracked. Add more as features ship.
+
+## 42. Modal does not fully trap focus
+Tab can leave the modal and land on background elements. Add a focus trap
+(e.g., @radix-ui/react-focus-scope) before production.

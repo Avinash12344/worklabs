@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { NotificationBell } from '@/components/notification-bell';
+import { Dropdown, DropdownItem, DropdownDivider } from '@/components/ui/dropdown';
 
 export default function HomePage() {
   const { user, loading, logout } = useAuth();
@@ -15,46 +16,60 @@ export default function HomePage() {
             WorkLabs
           </Link>
           <nav className="flex items-center gap-4">
-            {user?.role === 'admin' && (
-  <Link href="/admin" className="text-slate-700 hover:text-slate-900">
-    Admin
-  </Link>
-)}
-            <Link href="/jobs" className="text-slate-700 hover:text-slate-900">
-              Jobs
-            </Link>
-  <Link href="/search" className="text-slate-700 hover:text-slate-900">
-  Search
-</Link>          
-           {user && (
+            {user ? (
   <>
-    <NotificationBell />
-    <Link href="/contracts" className="text-slate-700 hover:text-slate-900">
-      Contracts
+    <Link href="/dashboard" className="text-slate-700 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100">
+      Dashboard
     </Link>
+    <Dropdown
+      trigger={
+        <button className="w-9 h-9 rounded-full bg-brand-600 text-white font-semibold flex items-center justify-center hover:bg-brand-700 transition-colors">
+          {user.full_name.charAt(0).toUpperCase()}
+        </button>
+      }
+    >
+      <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-800">
+        <div className="text-bodySm font-medium text-slate-900 dark:text-slate-100 truncate">
+          {user.full_name}
+        </div>
+        <div className="text-caption text-slate-500 dark:text-slate-400 truncate">
+          {user.email}
+        </div>
+      </div>
+
+      <Link href={`/users/${user.id}`}>
+        <DropdownItem>Profile</DropdownItem>
+      </Link>
+      <Link href="/settings/profile">
+        <DropdownItem>Settings</DropdownItem>
+      </Link>
+      {user.role === 'freelancer'}
+        <Link href="/settings/payments">
+          <DropdownItem>Payments</DropdownItem>
+        </Link>
+        <Link href="/settings/jobs">
+          <DropdownItem>Jobs</DropdownItem>
+        </Link>
+        <Link href="/settings/contracts">
+          <DropdownItem>Contracts</DropdownItem>
+        </Link>
+
+      {user.role === 'admin' && (
+        <Link href="/admin">
+          <DropdownItem>Admin</DropdownItem>
+        </Link>
+      )}
+
+      <DropdownDivider />
+
+      <DropdownItem danger onClick={logout}>
+        Log out
+      </DropdownItem>
+    </Dropdown>
   </>
-)}
-            {loading ? null : user ? (
-              <>
-              {user.role === 'freelancer' && (
-  <Link href="/settings/payments" className="text-slate-700 hover:text-slate-900">
-    Payments
-  </Link>
-)}
-                <Link
-                  href="/dashboard"
-                  className="text-slate-700 hover:text-slate-900"
-                >
-                  Dashboard
-                </Link>
-                <button
-                  onClick={logout}
-                  className="text-slate-700 hover:text-slate-900"
-                >
-                  Log out
-                </button>
-              </>
-            ) : (
+) : (
+  // Existing login/signup buttons
+
               <>
                 <Link
                   href="/login"

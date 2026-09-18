@@ -1,13 +1,17 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { Modal } from '@/components/ui/modal';
+import { Button } from '@/components/ui/button';
 
 
 export default function DashboardPage() {
   const { user, loading, logout } = useAuth();
   const router = useRouter();
+
+  const [showModal, setShowModal] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -30,6 +34,7 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-slate-50 p-8">
       <div className="max-w-3xl mx-auto">
+        
         <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold text-slate-900">Dashboard</h1>
           <button
